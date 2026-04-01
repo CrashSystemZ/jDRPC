@@ -37,7 +37,7 @@ implementation("fun.crashsystem:jDRPC:1.0.0")
 </dependency>
 ```
 
-If the artifact is not yet published in your environment, use local build publishing:
+If the artifact is not yet published (it's not) in your environment, use local build publishing:
 
 ```bash
 ./gradlew publishToMavenLocal

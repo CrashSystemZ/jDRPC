@@ -1,5 +1,8 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     `java-library`
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "fun.crashsystem"
@@ -31,4 +34,9 @@ tasks.javadoc {
         encoding = "UTF-8"
         addBooleanOption("Xdoclint:none", true)
     }
+}
+
+tasks.named<ShadowJar>("shadowJar") {
+    archiveClassifier.set("all")
+    mergeServiceFiles()
 }
