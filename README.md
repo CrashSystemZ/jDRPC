@@ -7,10 +7,10 @@ It is lightweight, cross-platform and has no native dependencies.
 
 - Java 17+ support
 - Unix domain sockets on Unix-like systems and named pipes on Windows
-- Rich Presence activity updates (`SET_ACTIVITY`, clear activity)
+- Rich Presence activity updates (set / clear activity)
+- Activity buttons, party info with privacy, timestamps, assets, secrets
+- Event listener support (ready, disconnect, error, activity join/spectate/join request)
 - Optional auto-reconnect with exponential backoff
-- RPC commands (`GET_GUILDS`, `GET_CHANNELS`, `SELECT_VOICE_CHANNEL`, etc.)
-- Event listener support (`READY`, `ACTIVITY_JOIN_REQUEST`, speaking events, ...)
 - Async API wrappers (`connectAsync`, `setActivityAsync`, ...)
 
 ## Requirements
@@ -91,7 +91,7 @@ public class Example {
                     .setState("Main Menu")
                     .setDetails("Building Discord rich presence")
                     .setLargeImage("game-logo", "jDRPC")
-                    .setStartTimestamp(System.currentTimeMillis())
+                    .setStartTimestamp(System.currentTimeMillis() / 1000L)
                     .addButton("GitHub", "https://github.com/")
                     .build();
 
@@ -123,7 +123,6 @@ client.setActivityAsync(activity)
 ## Event handling + subscriptions
 
 ```java
-import fun.crashsystem.jdrpc.activity.Activity;
 import fun.crashsystem.jdrpc.event.DiscordEventListener;
 import fun.crashsystem.jdrpc.event.EventType;
 import fun.crashsystem.jdrpc.entity.User;
@@ -142,8 +141,13 @@ client.addListener(new DiscordEventListener() {
     }
 
     @Override
-    public void onDisconnect(Throwable cause) {
-        System.err.println("Disconnected: " + cause.getMessage());
+    public void onError(int errorCode, String message) {
+        System.err.println("Error: " + message + " (code " + errorCode + ")");
+    }
+
+    @Override
+    public void onDisconnect(int errorCode, String message) {
+        System.err.println("Disconnected: " + message + " (code " + errorCode + ")");
     }
 
     @Override
@@ -158,19 +162,6 @@ client.subscribe(EventType.ACTIVITY_JOIN_REQUEST);
 
 You can subscribe only to event types with `subscribable = true` in `EventType`.
 
-## Useful command calls
-
-```java
-client.clearActivity();
-client.currentUser().ifPresent(user -> System.out.println(user.username()));
-client.connectedBuild().ifPresent(System.out::println);
-
-client.getGuilds();
-client.getChannels("123456789012345678");
-client.selectVoiceChannel("123456789012345678", false);
-client.sendActivityJoinInvite("123456789012345678");
-```
-
 ## Configuration (optional)
 
 ```java
@@ -183,30 +174,25 @@ DiscordIPC client = DiscordIPC.create(
         .preferredBuilds(java.util.List.of(DiscordBuild.STABLE))
         .reconnect(true)
         .maxReconnectAttempts(5)
-        .heartbeatIntervalMs(15000)
         .build()
 );
 ```
 
 ## Shutdown
 
-- `disconnect()` — graceful IPC close
-- `close()` — stop background threads and close connection
-- If created manually with try-with-resources, `close()` is called automatically.
-
-```java
-client.disconnect();
-```
+- `disconnect()` -- graceful IPC close
+- `close()` -- stop background threads and close connection
+- If created with try-with-resources, `close()` is called automatically.
 
 ## Build this project
 
 ```bash
-./gradlew build          # build + run tests
-./gradlew test           # run tests only
-./gradlew publishToMavenLocal
+./gradlew build       # compile and package
+./gradlew javadoc     # generate Javadoc
 ```
 
 ## Notes
 
-- This library currently uses `com.google.gson` for JSON serialization.
-- Logging is done through `org.slf4j:slf4j-api`.
+- Timestamps are in **Unix epoch seconds**, not milliseconds.
+- This library uses `com.google.gson` for JSON serialization.
+- Logging is done through `org.slf4j:slf4j-api` (no implementation bundled).
