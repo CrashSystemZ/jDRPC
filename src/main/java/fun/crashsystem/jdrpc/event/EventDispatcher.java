@@ -31,9 +31,14 @@ public final class EventDispatcher {
         notifyListeners("READY", listener -> listener.onReady(user));
     }
 
-    /** Dispatches disconnect event. */
-    public void dispatchDisconnect(Throwable cause) {
-        notifyListeners("DISCONNECT", listener -> listener.onDisconnect(cause));
+    /** Dispatches an error event (Discord returned an error on a command). */
+    public void dispatchError(int errorCode, String message) {
+        notifyListeners("ERROR", listener -> listener.onError(errorCode, message));
+    }
+
+    /** Dispatches disconnect event with error code and message from the CLOSE frame. */
+    public void dispatchDisconnect(int errorCode, String message) {
+        notifyListeners("DISCONNECT", listener -> listener.onDisconnect(errorCode, message));
     }
 
     /** Dispatches close event. */
@@ -60,33 +65,6 @@ public final class EventDispatcher {
                     log.warn("Failed to parse user payload for event {}", eventName, e);
                 }
             });
-
-            case "VOICE_CHANNEL_SELECT" -> {
-                String channelId = JsonUtils.optString(data, "channel_id").orElse(null);
-                String guildId = JsonUtils.optString(data, "guild_id").orElse(null);
-                notifyListeners(eventName, listener -> listener.onVoiceChannelSelect(channelId, guildId));
-            }
-
-            case "VOICE_SETTINGS_UPDATE" -> {
-                JsonObject eventData = data != null ? data : new JsonObject();
-                notifyListeners(eventName, listener -> listener.onVoiceSettingsUpdate(eventData));
-            }
-
-            case "SPEAKING_START" -> JsonUtils.optString(data, "user_id")
-                    .ifPresent(userId -> notifyListeners(eventName, listener -> listener.onSpeakingStart(userId)));
-
-            case "SPEAKING_STOP" -> JsonUtils.optString(data, "user_id")
-                    .ifPresent(userId -> notifyListeners(eventName, listener -> listener.onSpeakingStop(userId)));
-
-            case "NOTIFICATION_CREATE" -> {
-                if (data == null) {
-                    return;
-                }
-                JsonUtils.optString(data, "channel_id").ifPresent(channelId -> {
-                    JsonObject message = JsonUtils.optObject(data, "message").orElseGet(JsonObject::new);
-                    notifyListeners(eventName, listener -> listener.onNotificationCreate(channelId, message));
-                });
-            }
 
             default -> log.debug("Unknown event type: {}", eventName);
         }

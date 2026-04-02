@@ -175,15 +175,15 @@ public record Activity(ActivityType type, String state, String details, String u
             return this;
         }
 
-        /** Sets the start timestamp. Discord shows "XX:XX elapsed". */
-        public Builder setStartTimestamp(long epochMillis) {
-            this.timestamps = new ActivityTimestamps(epochMillis, timestamps != null ? timestamps.end() : null);
+        /** Sets the start timestamp (Unix epoch <b>seconds</b>). Discord shows "XX:XX elapsed". */
+        public Builder setStartTimestamp(long epochSeconds) {
+            this.timestamps = new ActivityTimestamps(epochSeconds, timestamps != null ? timestamps.end() : null);
             return this;
         }
 
-        /** Sets the end timestamp. Discord shows "XX:XX remaining". */
-        public Builder setEndTimestamp(long epochMillis) {
-            this.timestamps = new ActivityTimestamps(timestamps != null ? timestamps.start() : null, epochMillis);
+        /** Sets the end timestamp (Unix epoch <b>seconds</b>). Discord shows "XX:XX remaining". */
+        public Builder setEndTimestamp(long epochSeconds) {
+            this.timestamps = new ActivityTimestamps(timestamps != null ? timestamps.start() : null, epochSeconds);
             return this;
         }
 
@@ -223,6 +223,16 @@ public record Activity(ActivityType type, String state, String details, String u
         /** Sets the party information. */
         public Builder setParty(String id, int currentSize, int maxSize) {
             this.party = ActivityParty.of(id, currentSize, maxSize);
+            return this;
+        }
+
+        /**
+         * Sets the party information with privacy setting.
+         *
+         * @param privacy {@link ActivityParty#PRIVACY_PRIVATE} or {@link ActivityParty#PRIVACY_PUBLIC}
+         */
+        public Builder setParty(String id, int currentSize, int maxSize, int privacy) {
+            this.party = ActivityParty.of(id, currentSize, maxSize, privacy);
             return this;
         }
 

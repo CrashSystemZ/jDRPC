@@ -227,121 +227,27 @@ public final class DiscordIPC implements Closeable {
      * @throws IOException              if an I/O error occurs
      */
     public JsonObject subscribe(EventType eventType) throws IOException {
-        return subscribe(eventType, null);
-    }
-
-    /**
-     * Subscribes to a Discord IPC event type with optional channel scope.
-     *
-     * @param eventType the event type
-     * @param channelId optional channel ID scope
-     * @return the command response data
-     * @throws IOException if an I/O error occurs
-     */
-    public JsonObject subscribe(EventType eventType, String channelId) throws IOException {
         if (!eventType.subscribable()) {
             throw new IllegalArgumentException(eventType.name() + " is not subscribable");
         }
         Connection conn = requireConnection();
-        JsonObject args = null;
-        if (channelId != null) {
-            args = new JsonObject();
-            args.addProperty("channel_id", channelId);
-        }
-        return commandExecutor.execute(conn, "SUBSCRIBE", args, eventType.value());
+        return commandExecutor.execute(conn, "SUBSCRIBE", null, eventType.value());
     }
 
     /**
-     * Unsubscribes from an event type.
+     * Unsubscribes from a Discord IPC event type (blocking).
      *
      * @param eventType the event type to unsubscribe from
-     * @param channelId optional channel ID scope
      * @return the command response data
-     * @throws IOException if an I/O error occurs
+     * @throws IllegalArgumentException if the event is not subscribable
+     * @throws IOException              if an I/O error occurs
      */
-    public JsonObject unsubscribe(EventType eventType, String channelId) throws IOException {
-        Connection conn = requireConnection();
-        JsonObject args = null;
-        if (channelId != null) {
-            args = new JsonObject();
-            args.addProperty("channel_id", channelId);
+    public JsonObject unsubscribe(EventType eventType) throws IOException {
+        if (!eventType.subscribable()) {
+            throw new IllegalArgumentException(eventType.name() + " is not subscribable");
         }
-        return commandExecutor.execute(conn, "UNSUBSCRIBE", args, eventType.value());
-    }
-
-    /**
-     * Retrieves guild list. Requires rpc OAuth2 scope.
-     *
-     * @return the command response data containing guilds
-     * @throws IOException         if an I/O error occurs
-     * @throws ConnectionException if not connected
-     */
-    public JsonObject getGuilds() throws IOException {
         Connection conn = requireConnection();
-        return commandExecutor.execute(conn, "GET_GUILDS", null, null);
-    }
-
-    /**
-     * Retrieves a specific guild.
-     *
-     * @param guildId the guild ID to retrieve
-     * @return the command response data containing the guild
-     * @throws IOException         if an I/O error occurs
-     * @throws ConnectionException if not connected
-     */
-    public JsonObject getGuild(String guildId) throws IOException {
-        Connection conn = requireConnection();
-        JsonObject args = new JsonObject();
-        args.addProperty("guild_id", guildId);
-        return commandExecutor.execute(conn, "GET_GUILD", args, null);
-    }
-
-    /**
-     * Retrieves channels for a guild.
-     *
-     * @param guildId the guild ID to retrieve channels for
-     * @return the command response data containing channels
-     * @throws IOException         if an I/O error occurs
-     * @throws ConnectionException if not connected
-     */
-    public JsonObject getChannels(String guildId) throws IOException {
-        Connection conn = requireConnection();
-        JsonObject args = new JsonObject();
-        args.addProperty("guild_id", guildId);
-        return commandExecutor.execute(conn, "GET_CHANNELS", args, null);
-    }
-
-    /**
-     * Selects a voice channel.
-     *
-     * @param channelId the channel ID to select, or {@code null} to deselect
-     * @param force     whether to force the channel selection
-     * @return the command response data
-     * @throws IOException         if an I/O error occurs
-     * @throws ConnectionException if not connected
-     */
-    public JsonObject selectVoiceChannel(String channelId, boolean force) throws IOException {
-        Connection conn = requireConnection();
-        JsonObject args = new JsonObject();
-        if (channelId != null) {
-            args.addProperty("channel_id", channelId);
-        }
-        if (force) {
-            args.addProperty("force", true);
-        }
-        return commandExecutor.execute(conn, "SELECT_VOICE_CHANNEL", args, null);
-    }
-
-    /**
-     * Gets current voice settings.
-     *
-     * @return the command response data containing voice settings
-     * @throws IOException         if an I/O error occurs
-     * @throws ConnectionException if not connected
-     */
-    public JsonObject getVoiceSettings() throws IOException {
-        Connection conn = requireConnection();
-        return commandExecutor.execute(conn, "GET_VOICE_SETTINGS", null, null);
+        return commandExecutor.execute(conn, "UNSUBSCRIBE", null, eventType.value());
     }
 
     /**
@@ -371,7 +277,7 @@ public final class DiscordIPC implements Closeable {
         Connection conn = requireConnection();
         JsonObject args = new JsonObject();
         args.addProperty("user_id", userId);
-        return commandExecutor.execute(conn, "CLOSE_ACTIVITY_REQUEST", args, null);
+        return commandExecutor.execute(conn, "CLOSE_ACTIVITY_JOIN_REQUEST", args, null);
     }
 
     /**

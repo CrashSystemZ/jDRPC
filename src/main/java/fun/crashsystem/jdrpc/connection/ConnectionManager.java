@@ -26,7 +26,9 @@ import java.util.function.Consumer;
 
 /**
  * Manages the Discord IPC connection lifecycle including pipe discovery, handshake,
- * background read loop, heartbeat (PING/PONG), and auto-reconnect with exponential backoff.
+ * background read loop, and auto-reconnect with exponential backoff.
+ * <p>
+ * Discord sends PING frames; the client responds with PONG (handled in the read loop).
  */
 @Slf4j
 @Getter
@@ -40,11 +42,6 @@ public final class ConnectionManager {
         t.setDaemon(true);
         return t;
     });
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "jDRPC-heartbeat");
-        t.setDaemon(true);
-        return t;
-    });
     private final DiscordIPCConfig config;
     private final CommandExecutor commandExecutor;
     private final EventDispatcher eventDispatcher;
@@ -54,7 +51,6 @@ public final class ConnectionManager {
     private volatile User currentUser;
     private volatile DiscordBuild currentBuild;
     private volatile Future<?> readFuture;
-    private volatile ScheduledFuture<?> heartbeatFuture;
     private Consumer<ConnectionState> stateListener;
 
     public ConnectionManager(DiscordIPCConfig config, CommandExecutor commandExecutor, EventDispatcher eventDispatcher) {
@@ -182,7 +178,6 @@ public final class ConnectionManager {
     public void shutdown() {
         disconnect();
         executor.shutdownNow();
-        scheduler.shutdownNow();
     }
 
     private void startReadLoop(long generationToken, Connection conn) {
@@ -205,8 +200,10 @@ public final class ConnectionManager {
 
                     switch (frame.op()) {
                         case CLOSE -> {
-                            log.info("Received CLOSE frame from Discord");
-                            handleDisconnect(new ConnectionException("Discord closed connection"), generationToken);
+                            int closeCode = JsonUtils.getInt(frame.data(), "code", 0);
+                            String closeMsg = JsonUtils.getString(frame.data(), "message", "Discord closed connection");
+                            log.info("Received CLOSE frame from Discord: code={}, message={}", closeCode, closeMsg);
+                            handleDisconnect(closeCode, closeMsg, new ConnectionException(closeMsg), generationToken);
                             return;
                         }
                         case PING -> conn.write(new Frame(OpCode.PONG, frame.data()));
@@ -218,41 +215,25 @@ public final class ConnectionManager {
             } catch (Exception e) {
                 if (!Thread.currentThread().isInterrupted() && isGenerationActive(generationToken)) {
                     log.warn("Read loop error: {}", e.getMessage(), e);
-                    handleDisconnect(e, generationToken);
+                    handleDisconnect(0, e.getMessage(), e, generationToken);
                 }
             }
             log.debug("Read loop ended for generation {}", generationToken);
         });
     }
 
-    private void startHeartbeat(long generationToken, Connection conn) {
-        long intervalMs = config.heartbeatIntervalMs();
-        heartbeatFuture = scheduler.scheduleAtFixedRate(() -> {
-            if (!isGenerationActive(generationToken)) {
-                return;
-            }
-            if (!conn.isOpen()) {
-                handleDisconnect(new ConnectionException("Connection closed during heartbeat"), generationToken);
-                return;
-            }
-
-            try {
-                JsonObject pingData = new JsonObject();
-                pingData.addProperty("t", System.currentTimeMillis());
-                conn.write(new Frame(OpCode.PING, pingData));
-                log.debug("Sent PING");
-            } catch (Exception e) {
-                if (isGenerationActive(generationToken)) {
-                    log.warn("Heartbeat failed: {}", e.getMessage());
-                    handleDisconnect(e, generationToken);
-                }
-            }
-        }, intervalMs, intervalMs, TimeUnit.MILLISECONDS);
-    }
 
     private void handleIncomingFrame(JsonObject json) {
         if (json == null) {
             return;
+        }
+
+        String evt = JsonUtils.optString(json, "evt").orElse(null);
+        if ("ERROR".equals(evt) && JsonUtils.optString(json, "nonce").isPresent()) {
+            JsonObject data = JsonUtils.optObject(json, "data").orElse(null);
+            int code = JsonUtils.getInt(data, "code", 1000);
+            String message = JsonUtils.getString(data, "message", "Unknown error");
+            eventDispatcher.dispatchError(code, message);
         }
 
         boolean handled = commandExecutor.handleResponse(json);
@@ -272,7 +253,7 @@ public final class ConnectionManager {
         });
     }
 
-    private void handleDisconnect(Throwable cause, long generationToken) {
+    private void handleDisconnect(int errorCode, String errorMessage, Throwable cause, long generationToken) {
         if (!generation.compareAndSet(generationToken, generationToken + 1)) {
             log.debug("Ignoring stale disconnect for generation {}", generationToken);
             return;
@@ -285,7 +266,7 @@ public final class ConnectionManager {
         closeQuietly(conn, "disconnect");
         commandExecutor.markTransportUnavailable();
         commandExecutor.cancelAll(new ConnectionException("Disconnected", cause));
-        eventDispatcher.dispatchDisconnect(cause);
+        eventDispatcher.dispatchDisconnect(errorCode, errorMessage != null ? errorMessage : (cause != null ? cause.getMessage() : "Unknown"));
 
         if (!config.reconnect()) {
             reconnectGeneration.set(-1);
@@ -446,14 +427,8 @@ public final class ConnectionManager {
         commandExecutor.markTransportAvailable();
         reconnectGeneration.compareAndSet(generationToken, -1);
         setState(new ConnectionState.Connected(result.user, result.build));
-        log.info("{} to Discord ({}) as {}",
-                reconnecting ? "Reconnected" : "Connected",
-                result.build,
-                result.user.displayName());
-
         eventDispatcher.dispatchReady(result.user);
         startReadLoop(generationToken, result.connection);
-        startHeartbeat(generationToken, result.connection);
         return true;
     }
 
@@ -479,12 +454,6 @@ public final class ConnectionManager {
         if (currentReadFuture != null) {
             currentReadFuture.cancel(true);
             this.readFuture = null;
-        }
-
-        ScheduledFuture<?> currentHeartbeatFuture = this.heartbeatFuture;
-        if (currentHeartbeatFuture != null) {
-            currentHeartbeatFuture.cancel(true);
-            this.heartbeatFuture = null;
         }
     }
 

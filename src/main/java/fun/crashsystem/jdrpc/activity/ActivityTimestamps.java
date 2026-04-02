@@ -9,28 +9,30 @@ import java.util.Optional;
  * <p>
  * When {@code start} is set, Discord shows "XX:XX elapsed".
  * When {@code end} is set, Discord shows "XX:XX remaining".
+ * <p>
+ * <b>Important:</b> Discord expects Unix epoch timestamps in <b>seconds</b>, not milliseconds.
  *
- * @param start Unix timestamp (milliseconds) when the activity started, or {@code null}
- * @param end   Unix timestamp (milliseconds) when the activity will end, or {@code null}
+ * @param start Unix timestamp (<b>seconds</b>) when the activity started, or {@code null}
+ * @param end   Unix timestamp (<b>seconds</b>) when the activity will end, or {@code null}
  */
 public record ActivityTimestamps(Long start, Long end) {
 
     /**
      * Creates timestamps with only a start time.
      *
-     * @param epochMillis the start time as Unix epoch milliseconds
+     * @param epochSeconds the start time as Unix epoch <b>seconds</b>
      */
-    public static ActivityTimestamps startingAt(long epochMillis) {
-        return new ActivityTimestamps(epochMillis, null);
+    public static ActivityTimestamps startingAt(long epochSeconds) {
+        return new ActivityTimestamps(epochSeconds, null);
     }
 
     /**
      * Creates timestamps with only an end time.
      *
-     * @param epochMillis the end time as Unix epoch milliseconds
+     * @param epochSeconds the end time as Unix epoch <b>seconds</b>
      */
-    public static ActivityTimestamps endingAt(long epochMillis) {
-        return new ActivityTimestamps(null, epochMillis);
+    public static ActivityTimestamps endingAt(long epochSeconds) {
+        return new ActivityTimestamps(null, epochSeconds);
     }
 
     /** Serializes to JSON for the IPC wire format. */

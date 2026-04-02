@@ -29,7 +29,7 @@ No tests exist yet. The build uses `java-library` plugin with Java 17 toolchain.
 - `PipeLocator` / `PipePathProvider` - Discovers Discord IPC pipes 0-9 across builds (STABLE/PTB/CANARY)
 
 ### Protocol Layer (`protocol/`)
-Wire format: `[OpCode:4B LE][Length:4B LE][JSON UTF-8]`. OpCodes: HANDSHAKE(0), FRAME(1), CLOSE(2), PING(3), PONG(4). Max payload 20MB.
+Wire format: `[OpCode:4B LE][Length:4B LE][JSON UTF-8]`. OpCodes: HANDSHAKE(0), FRAME(1), CLOSE(2), PING(3), PONG(4). Max frame size 64KB.
 
 ### Command Layer (`command/`)
 `CommandExecutor` uses nonce-based request/response correlation with CompletableFuture. Optional token-bucket rate limiting. Default 10s timeout.
@@ -44,7 +44,7 @@ Wire format: `[OpCode:4B LE][Length:4B LE][JSON UTF-8]`. OpCodes: HANDSHAKE(0), 
 
 ## Threading
 
-Three daemon threads: `jDRPC-worker` (I/O read loop), `jDRPC-heartbeat` (PING every 15s), `jDRPC-async` (async API calls). Thread safety via AtomicReference, ReentrantLock on writes, ConcurrentHashMap for pending commands.
+Two daemon threads: `jDRPC-worker` (I/O read loop, responds to Discord PINGs with PONGs), `jDRPC-async` (async API calls). Thread safety via AtomicReference, ReentrantLock on writes, ConcurrentHashMap for pending commands.
 
 ## Dependencies
 

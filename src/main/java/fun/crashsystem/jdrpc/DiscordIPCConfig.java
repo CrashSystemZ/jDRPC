@@ -61,12 +61,6 @@ public final class DiscordIPCConfig {
     private final long reconnectMaxDelayMs = 60_000;
 
     /**
-     * Interval between keep-alive PING messages (ms). Default: 15000.
-     */
-    @Builder.Default
-    private final long heartbeatIntervalMs = 15_000;
-
-    /**
      * Maximum time to wait for a command response (ms). Default: 10000.
      */
     @Builder.Default
