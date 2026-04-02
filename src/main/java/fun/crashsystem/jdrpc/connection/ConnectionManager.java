@@ -173,11 +173,38 @@ public final class ConnectionManager {
     }
 
     /**
-     * Shuts down all executor services. Call on application exit.
+     * Shuts down all background threads and cleans up state. Call on application exit.
+     * <p>
+     * Does NOT attempt to send a CLOSE frame or close the pipe handle.
+     * On Windows, closing a named pipe handle blocks indefinitely if another thread
+     * has pending synchronous I/O on it (read or write). Instead, the connection is
+     * marked closed immediately (preventing new operations) and the underlying handle
+     * is only closed when there is no in-flight I/O left. If that never becomes safe
+     * before process exit, the OS reclaims the handle.
+     * <p>
+     * The CLOSE frame is a courtesy — Discord detects the pipe disconnection
+     * when the process exits and the handle is released.
      */
     public void shutdown() {
-        disconnect();
+        generation.incrementAndGet();
+        reconnectGeneration.set(-1);
+        cancelBackgroundTasks();
+
+        Connection conn = this.connection;
+        clearConnectionState();
+        // Mark the connection as closed without blocking.
+        // On Windows this avoids CloseHandle() deadlocking on pending synchronous I/O.
+        if (conn != null) {
+            closeQuietly(conn, "shutdown");
+        }
+
         executor.shutdownNow();
+
+        commandExecutor.markTransportUnavailable();
+        commandExecutor.cancelAll(new ConnectionException("Shutdown"));
+        setState(new ConnectionState.Closed());
+        eventDispatcher.dispatchClose();
+        log.info("Shut down Discord IPC");
     }
 
     private void startReadLoop(long generationToken, Connection conn) {

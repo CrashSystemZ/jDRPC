@@ -14,6 +14,16 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * IPC connection for Windows using named pipes via {@link RandomAccessFile}.
+ * <p>
+ * On Windows, the kernel serializes all operations on a non-overlapped file handle,
+ * including {@code CloseHandle()}. This means {@link RandomAccessFile#close()} will block
+ * indefinitely if another thread has a pending read or write on the same pipe.
+ * <p>
+ * To avoid deadlocks during shutdown, {@link #close()} first marks the transport logically
+ * closed, then only closes the underlying handle when no read/write is in flight. If a read
+ * or write is still active, the actual handle close is deferred until the last operation
+ * completes. This keeps shutdown non-blocking while still releasing the handle as soon as it
+ * is safe to do so.
  */
 @Slf4j
 final class WindowsConnection implements Connection {
@@ -21,7 +31,10 @@ final class WindowsConnection implements Connection {
     private final RandomAccessFile file;
     private final InputStream inputStream;
     private final OutputStream outputStream;
-    private volatile boolean closed = false;
+    private final Object stateLock = new Object();
+    private volatile boolean closeRequested;
+    private volatile boolean handleClosed;
+    private boolean reading;
 
     WindowsConnection(String path) throws IOException {
         this.file = new RandomAccessFile(path, "rw");
@@ -35,7 +48,7 @@ final class WindowsConnection implements Connection {
 
             @Override
             public int read(byte @NonNull [] b, int off, int len) throws IOException {
-                if (closed) {
+                if (closeRequested) {
                     return -1;
                 }
                 return file.read(b, off, len);
@@ -57,40 +70,109 @@ final class WindowsConnection implements Connection {
 
     @Override
     public boolean isOpen() {
-        return !closed;
+        return !closeRequested;
     }
 
     @Override
     public Frame read() throws IOException {
-        return FrameReader.read(inputStream);
+        beginRead();
+        boolean closeAfterRead;
+        try {
+            return FrameReader.read(inputStream);
+        } finally {
+            closeAfterRead = endRead();
+            if (closeAfterRead) {
+                closeHandleQuietly("completed read");
+            }
+        }
     }
 
     @Override
     public void write(Frame frame) throws IOException {
-        writeLock.lock();
+        // Pre-lock check: bail out immediately if connection is closing,
+        // instead of blocking on writeLock, which may be held by a thread stuck in native I/O.
+        ensureOpen();
         try {
-            ensureOpen();
-            FrameWriter.write(outputStream, frame);
+            writeLock.lock();
+            try {
+                ensureOpen();
+                FrameWriter.write(outputStream, frame);
+            } finally {
+                writeLock.unlock();
+            }
         } finally {
-            writeLock.unlock();
+            if (closeRequested && !handleClosed) {
+                closeHandleQuietly("completed write");
+            }
         }
     }
 
     @Override
     public void close() throws IOException {
-        writeLock.lock();
+        closeRequested = true;
+        attemptHandleClose("close requested");
+    }
+
+    private void ensureOpen() throws IOException {
+        if (closeRequested) {
+            throw new IOException("Connection is closed");
+        }
+    }
+
+    private void beginRead() throws IOException {
+        synchronized (stateLock) {
+            ensureOpen();
+            reading = true;
+        }
+    }
+
+    private boolean endRead() {
+        synchronized (stateLock) {
+            reading = false;
+            return closeRequested && !handleClosed;
+        }
+    }
+
+    private void attemptHandleClose(String reason) throws IOException {
+        synchronized (stateLock) {
+            if (handleClosed) {
+                return;
+            }
+            if (reading) {
+                log.debug("Windows pipe marked closed ({}; read pending, deferring handle close)", reason);
+                return;
+            }
+        }
+
+        if (!writeLock.tryLock()) {
+            log.debug("Windows pipe marked closed ({}; write pending, deferring handle close)", reason);
+            return;
+        }
+
         try {
-            closed = true;
-            file.close();
+            synchronized (stateLock) {
+                if (handleClosed) {
+                    return;
+                }
+                if (reading) {
+                    log.debug("Windows pipe marked closed ({}; read started while waiting for write lock)", reason);
+                    return;
+                }
+
+                file.close();
+                handleClosed = true;
+            }
             log.debug("Windows connection closed");
         } finally {
             writeLock.unlock();
         }
     }
 
-    private void ensureOpen() throws IOException {
-        if (closed) {
-            throw new IOException("Connection is closed");
+    private void closeHandleQuietly(String reason) {
+        try {
+            attemptHandleClose(reason);
+        } catch (IOException e) {
+            log.warn("Failed to close Windows pipe ({})", reason, e);
         }
     }
 }

@@ -77,6 +77,7 @@ final class UnixConnection implements Connection {
 
     @Override
     public void write(Frame frame) throws IOException {
+        ensureOpen();
         writeLock.lock();
         try {
             ensureOpen();
@@ -92,14 +93,14 @@ final class UnixConnection implements Connection {
 
     @Override
     public void close() throws IOException {
-        writeLock.lock();
-        try {
-            closed = true;
-            channel.close();
-            log.debug("Unix connection closed");
-        } finally {
-            writeLock.unlock();
-        }
+        // Do NOT acquire writeLock here.
+        // If a writer thread is stuck in native I/O while holding writeLock,
+        // acquiring it here would deadlock. Closing the channel causes
+        // any blocked read/write to throw AsynchronousCloseException,
+        // which releases writeLock naturally via the writer's finally block.
+        closed = true;
+        channel.close();
+        log.debug("Unix connection closed");
     }
 
     /**
