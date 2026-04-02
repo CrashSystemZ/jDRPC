@@ -21,40 +21,55 @@ It is lightweight, cross-platform and has no native dependencies.
 
 ## Installation
 
-### Gradle
+The library is hosted on [JitPack](https://jitpack.io). You **must** add the JitPack repository to your project first.
+
+### Gradle (Groovy DSL)
+
+```groovy
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.github.CrashSystemZ:jDRPC:v1.0.0'
+}
+```
+
+### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("fun.crashsystem:jDRPC:1.0.0")
+repositories {
+    mavenCentral()
+    maven("https://jitpack.io")
+}
+
+dependencies {
+    implementation("com.github.CrashSystemZ:jDRPC:v1.0.0")
+}
 ```
 
 ### Maven
 
+Add the JitPack repository to your `pom.xml`:
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+Then add the dependency:
+
 ```xml
 <dependency>
-    <groupId>fun.crashsystem</groupId>
+    <groupId>com.github.CrashSystemZ</groupId>
     <artifactId>jDRPC</artifactId>
-    <version>1.0.0</version>
+    <version>v1.0.0</version>
 </dependency>
-```
-
-If the artifact is not yet published (it's not) in your environment, use local build publishing:
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-Or add the source project as a local module:
-
-- Git submodule or nested module:
-```text
-include(":jDRPC")
-project(":jDRPC").projectDir = file("../jDRPC")
-```
-
-```kotlin
-dependencies {
-    implementation(project(":jDRPC"))
-}
 ```
 
 ## Quick start
