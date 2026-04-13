@@ -3,6 +3,8 @@
 `Java Discord Rich Presence` is a modern Java 17 library for Discord IPC / Rich Presence.
 It is lightweight, cross-platform and has no native dependencies.
 
+<img width="280" height="206" alt="preview" src="https://github.com/user-attachments/assets/072f8e6d-6dcf-4735-acc4-6566389c38fa" />
+
 ## Features
 
 - Java 17+ support
