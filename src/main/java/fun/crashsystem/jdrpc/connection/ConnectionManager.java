@@ -315,7 +315,7 @@ public final class ConnectionManager {
                 && isGenerationActive(generationToken)
                 && (maxAttempts == 0 || attempt <= maxAttempts)) {
             setState(new ConnectionState.Reconnecting(attempt, FailureInfo.from(lastFailure)));
-            log.info("Reconnecting (attempt {})...", attempt);
+            log.debug("Reconnecting (attempt {})...", attempt);
 
             try {
                 Thread.sleep(delay);
