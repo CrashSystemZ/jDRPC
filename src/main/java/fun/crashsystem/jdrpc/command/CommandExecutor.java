@@ -6,7 +6,7 @@ import fun.crashsystem.jdrpc.error.CommandException;
 import fun.crashsystem.jdrpc.error.RpcErrorCode;
 import fun.crashsystem.jdrpc.protocol.Frame;
 import fun.crashsystem.jdrpc.util.JsonUtils;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -24,7 +24,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Executes Discord IPC commands and handles nonce-based response matching.
  * Thread-safe via {@link ConcurrentHashMap}.
  */
-@Slf4j
+@Log4j2
 public final class CommandExecutor {
     private final ConcurrentHashMap<String, CompletableFuture<JsonObject>> pending = new ConcurrentHashMap<>();
     private final AtomicLong nonceCounter = new AtomicLong();

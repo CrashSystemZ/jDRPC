@@ -1,7 +1,7 @@
 package fun.crashsystem.jdrpc.connection;
 
 import fun.crashsystem.jdrpc.util.Platform;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,7 +21,7 @@ import java.util.Map;
  *   <li><b>macOS/Linux</b>: {@code {tmpdir}/discord-ipc-{i}}</li>
  * </ul>
  */
-@Slf4j
+@Log4j2
 final class PipeLocator {
     private static final List<String> TMP_ENV_VARS = List.of("XDG_RUNTIME_DIR", "TMPDIR", "TMP", "TEMP");
     private static final Path UNIX_TMP_DIR = resolveUnixPipeDir(

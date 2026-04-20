@@ -3,7 +3,7 @@ package fun.crashsystem.jdrpc.event;
 import com.google.gson.JsonObject;
 import fun.crashsystem.jdrpc.entity.User;
 import fun.crashsystem.jdrpc.util.JsonUtils;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -11,7 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Routes incoming Discord IPC events to registered {@link DiscordEventListener}s.
  */
-@Slf4j
+@Log4j2
 public final class EventDispatcher {
 
     private final List<DiscordEventListener> listeners = new CopyOnWriteArrayList<>();
