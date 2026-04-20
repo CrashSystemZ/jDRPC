@@ -14,7 +14,7 @@ import fun.crashsystem.jdrpc.util.JsonUtils;
 import fun.crashsystem.jdrpc.util.Platform;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +30,7 @@ import java.util.function.Consumer;
  * <p>
  * Discord sends PING frames; the client responds with PONG (handled in the read loop).
  */
-@Slf4j
+@Log4j2
 @Getter
 @Accessors(fluent = true)
 public final class ConnectionManager {

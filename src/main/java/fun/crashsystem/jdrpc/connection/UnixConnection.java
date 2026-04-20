@@ -5,7 +5,7 @@ import fun.crashsystem.jdrpc.protocol.Frame;
 import fun.crashsystem.jdrpc.protocol.FrameSupport;
 import fun.crashsystem.jdrpc.protocol.FrameSupport.FrameFormatException;
 import fun.crashsystem.jdrpc.protocol.OpCode;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -25,7 +25,7 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
  * Reads/writes directly via {@link SocketChannel} and {@link ByteBuffer}
  * instead of InputStream wrappers, which avoids buffering issues on macOS.
  */
-@Slf4j
+@Log4j2
 final class UnixConnection implements Connection {
     private final ReentrantLock writeLock = new ReentrantLock();
     private final SocketChannel channel;
