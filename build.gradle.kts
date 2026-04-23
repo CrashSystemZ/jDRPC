@@ -40,9 +40,13 @@ tasks.javadoc {
 tasks.named<ShadowJar>("shadowJar") {
     archiveClassifier.set("all")
     mergeServiceFiles()
+
     dependencies {
         exclude(dependency("org.apache.logging.log4j:log4j-api:.*"))
         exclude(dependency("net.java.dev.jna:jna:.*"))
         exclude(dependency("net.java.dev.jna:jna-platform:.*"))
     }
+
+    relocate("com.google.gson", "fun.crashsystem.jdrpc.libs.com.google.gson")
+    relocate("org.apache.commons.lang3", "fun.crashsystem.jdrpc.libs.org.apache.commons.lang3")
 }
