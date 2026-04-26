@@ -17,7 +17,6 @@ dependencies {
     api("org.apache.commons:commons-lang3:3.18.0")
 
     implementation("org.apache.logging.log4j:log4j-api:2.24.1")
-    implementation("net.java.dev.jna:jna-platform:5.15.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
 
@@ -50,8 +49,6 @@ tasks.named<ShadowJar>("shadowJar") {
 
     dependencies {
         exclude(dependency("org.apache.logging.log4j:log4j-api:.*"))
-        exclude(dependency("net.java.dev.jna:jna:.*"))
-        exclude(dependency("net.java.dev.jna:jna-platform:.*"))
     }
 
     relocate("com.google.gson", "fun.crashsystem.jdrpc.libs.com.google.gson")
