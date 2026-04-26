@@ -18,6 +18,9 @@ dependencies {
 
     implementation("org.apache.logging.log4j:log4j-api:2.24.1")
     implementation("net.java.dev.jna:jna-platform:5.15.0")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+
     compileOnly("org.projectlombok:lombok:1.18.36")
     annotationProcessor("org.projectlombok:lombok:1.18.36")
 }
@@ -35,6 +38,10 @@ tasks.javadoc {
         encoding = "UTF-8"
         addBooleanOption("Xdoclint:none", true)
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.named<ShadowJar>("shadowJar") {
