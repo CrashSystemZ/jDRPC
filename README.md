@@ -5,15 +5,15 @@
 [![License: MIT](https://img.shields.io/github/license/CrashSystemZ/jDRPC)](LICENSE)
 
 `Java Discord Rich Presence` is a modern Java 17 library for Discord IPC / Rich Presence.
-It is lightweight and cross-platform: pure Java on macOS/Linux (Unix domain sockets via JDK 17+),
-and JNA on Windows (overlapped I/O on named pipes, required for safe concurrent read/write).
+It is lightweight, cross-platform and pure Java: Unix domain sockets on macOS/Linux (JDK 17+),
+named pipes on Windows (`RandomAccessFile`, no native code).
 
 <img width="280" height="206" alt="preview" src="https://github.com/user-attachments/assets/072f8e6d-6dcf-4735-acc4-6566389c38fa" />
 
 ## Features
 
 - Java 17+ support
-- Unix domain sockets on macOS/Linux (pure JDK); overlapped named pipes on Windows (via JNA)
+- Pure Java: Unix domain sockets on macOS/Linux, `RandomAccessFile` named pipes on Windows
 - Rich Presence activity updates (set / clear activity)
 - Activity buttons, party info with privacy, timestamps, assets, secrets
 - Event listener support (ready, disconnect, error, activity join/spectate/join request)
@@ -203,4 +203,4 @@ DiscordIPC client = DiscordIPC.create(
 - Timestamps are in **Unix epoch seconds**, not milliseconds.
 - JSON serialization uses `com.google.gson` (bundled).
 - Logging uses `org.apache.logging.log4j:log4j-api` as a `compileOnly` dependency — the consumer provides a Log4j2 implementation at runtime.
-- On Windows the library requires `net.java.dev.jna:jna-platform` at runtime to open Discord's named pipe with `FILE_FLAG_OVERLAPPED`. This is needed because synchronous pipe I/O serializes concurrent reads and writes on the same handle at the kernel level and deadlocks the read loop. macOS/Linux do not need JNA.
+- On Windows the connection uses `RandomAccessFile` with a polling read strategy: a synchronous pipe handle would deadlock if a blocking `ReadFile` ran concurrently with a `WriteFile`, so the read side polls `RandomAccessFile.length()` (which on Windows pipes reports buffered byte count) and only invokes `read(...)` once data is available. No native code or JNA is required.
